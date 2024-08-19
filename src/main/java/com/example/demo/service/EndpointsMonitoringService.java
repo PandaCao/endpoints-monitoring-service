@@ -11,12 +11,16 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.logging.Logger;
 
 @Service
 public class EndpointsMonitoringService {
+    private final Logger LOG = Logger.getLogger(EndpointsMonitoringService.class.getName());
 
     private final MonitoredEndpointRepository monitoredEndpointRepository;
     private final MonitoringResultRepository monitoringResultRepository;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public EndpointsMonitoringService(
             MonitoredEndpointRepository monitoredEndpointRepository,
@@ -25,8 +29,6 @@ public class EndpointsMonitoringService {
         this.monitoredEndpointRepository = monitoredEndpointRepository;
         this.monitoringResultRepository = monitoringResultRepository;
     }
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     @Scheduled(fixedRate = 5000)  // Check all endpoints every 5 seconds
     public void monitorEndpoints() {
@@ -46,9 +48,9 @@ public class EndpointsMonitoringService {
                 monitoringResult.setMonitoredEndpoint(endpoint);
 
                 // Log the information
-                System.out.println("Monitored URL: " + endpoint.getUrl());
-                System.out.println("Status Code: " + response.getStatusCode().value());
-                System.out.println("Payload: " + response.getBody());
+                LOG.info("Monitored URL: " + endpoint.getUrl());
+                LOG.info("Status Code: " + response.getStatusCode().value());
+                LOG.info("Payload: " + response.getBody());
 
                 // Save monitoring result
                 monitoringResultRepository.save(monitoringResult);
