@@ -66,8 +66,8 @@ public class EndpointsMonitoringService {
         }
     }
 
-    //TODO update this logic to get interval from DB
-    @Scheduled(fixedRate = 5000)  // Check all endpoints every 5 seconds
+    //TODO Try to make better scheduler, e.g. usage of ScheduledExecutorService/ScheduledThreadPoolExecutor
+    @Scheduled(fixedRate = 1000)  // Check all endpoints every 5 seconds
     public void monitorEndpoints() {
         List<MonitoredEndpoint> endpoints = monitoredEndpointsRepository.findAll();
 
@@ -78,8 +78,10 @@ public class EndpointsMonitoringService {
                 // Send an HTTP GET request to the URL
                 ResponseEntity<String> response = restTemplate.getForEntity(endpoint.getUrl(), String.class);
 
-                // Set monitoring result
-                monitoringResult.setDate(LocalDateTime.now());
+                // Set monitoring result and update dateOfLastCheck
+                var timeNow = LocalDateTime.now();
+                monitoringResult.setDate(timeNow);
+                endpoint.setDateOfLastCheck(timeNow);
                 monitoringResult.setReturnedHttpStatusCode(response.getStatusCode().value());
                 monitoringResult.setPayload(response.getBody());
                 monitoringResult.setMonitoredEndpoint(endpoint);
@@ -89,12 +91,11 @@ public class EndpointsMonitoringService {
                 log.info("Status Code: {}", response.getStatusCode().value());
                 log.info("Payload: {}", response.getBody());
 
-                // Save monitoring result
+                // Save monitoring result and endpoint
                 monitoringResultRepository.save(monitoringResult);
+                monitoredEndpointsRepository.save(endpoint);
             }
         }
-
-        log.info("{}", LocalDateTime.now());
     }
 
     private boolean shouldCheckEndpoint(MonitoredEndpoint endpoint) {
