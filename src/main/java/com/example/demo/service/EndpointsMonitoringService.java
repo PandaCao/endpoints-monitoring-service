@@ -2,7 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.domain.dto.MonitoredEndpoint;
 import com.example.demo.domain.dto.MonitoringResult;
-import com.example.demo.domain.repository.MonitoredEndpointRepository;
+import com.example.demo.domain.repository.MonitoredEndpointsRepository;
 import com.example.demo.domain.repository.MonitoringResultRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,28 +11,53 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 @Service
 public class EndpointsMonitoringService {
     private final Logger LOG = Logger.getLogger(EndpointsMonitoringService.class.getName());
 
-    private final MonitoredEndpointRepository monitoredEndpointRepository;
+    private final MonitoredEndpointsRepository monitoredEndpointsRepository;
     private final MonitoringResultRepository monitoringResultRepository;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     public EndpointsMonitoringService(
-            MonitoredEndpointRepository monitoredEndpointRepository,
+            MonitoredEndpointsRepository monitoredEndpointsRepository,
             MonitoringResultRepository monitoringResultRepository
             ) {
-        this.monitoredEndpointRepository = monitoredEndpointRepository;
+        this.monitoredEndpointsRepository = monitoredEndpointsRepository;
         this.monitoringResultRepository = monitoringResultRepository;
+    }
+
+    public List<MonitoredEndpoint> getAllMonitoredEndpoints() {
+        return monitoredEndpointsRepository.findAll();
+    }
+
+    public Optional<MonitoredEndpoint> getMonitoredEndpointById(Long id) {
+        return monitoredEndpointsRepository.findById(id);
+    }
+
+    public MonitoredEndpoint createMonitoredEndpoint(MonitoredEndpoint monitoredEndpoint) {
+        return monitoredEndpointsRepository.save(monitoredEndpoint);
+    }
+
+    public MonitoredEndpoint updateMonitoredEndpoint(Long id, MonitoredEndpoint monitoredEndpointDetails) {
+        return monitoredEndpointsRepository.findById(id).map(endpoint -> {
+            endpoint.setName(monitoredEndpointDetails.getName());
+            endpoint.setUrl(monitoredEndpointDetails.getUrl());
+            return monitoredEndpointsRepository.save(endpoint);
+        }).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    public void deleteMonitoredEndpoint(Long id) {
+        monitoredEndpointsRepository.deleteById(id);
     }
 
     @Scheduled(fixedRate = 5000)  // Check all endpoints every 5 seconds
     public void monitorEndpoints() {
-        List<MonitoredEndpoint> endpoints = monitoredEndpointRepository.findAll();
+        List<MonitoredEndpoint> endpoints = monitoredEndpointsRepository.findAll();
 
         for (MonitoredEndpoint endpoint : endpoints) {
             if (shouldCheckEndpoint(endpoint)) {
@@ -56,6 +81,8 @@ public class EndpointsMonitoringService {
                 monitoringResultRepository.save(monitoringResult);
             }
         }
+
+        LOG.info("" + LocalDateTime.now());
     }
 
     private boolean shouldCheckEndpoint(MonitoredEndpoint endpoint) {
