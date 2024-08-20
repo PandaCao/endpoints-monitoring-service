@@ -16,6 +16,14 @@ public class User {
     private String email;
     private UUID accessToken;
 
+    public User() {}
+
+    public User(String username, String email, UUID accessToken){
+        this.username = username;
+        this.email = email;
+        this.accessToken = accessToken;
+    }
+
     public Long getId() {
         return id;
     }

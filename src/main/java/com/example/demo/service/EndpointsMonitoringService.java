@@ -4,6 +4,8 @@ import com.example.demo.domain.dto.MonitoredEndpoint;
 import com.example.demo.domain.dto.MonitoringResult;
 import com.example.demo.domain.repository.MonitoredEndpointsRepository;
 import com.example.demo.domain.repository.MonitoringResultRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -12,11 +14,10 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Logger;
 
 @Service
 public class EndpointsMonitoringService {
-    private final Logger LOG = Logger.getLogger(EndpointsMonitoringService.class.getName());
+    private final Logger log = LoggerFactory.getLogger(EndpointsMonitoringService.class);
 
     private final MonitoredEndpointsRepository monitoredEndpointsRepository;
     private final MonitoringResultRepository monitoringResultRepository;
@@ -55,6 +56,17 @@ public class EndpointsMonitoringService {
         monitoredEndpointsRepository.deleteById(id);
     }
 
+    public int getMonitoredInterval(Long id){
+        var endpoint = monitoredEndpointsRepository.findById(id);
+        if (endpoint.isPresent())
+            return endpoint.get().getMonitoredInterval();
+        else{
+            log.error("Monitored endpoint not found");
+            return 0;
+        }
+    }
+
+    //TODO update this logic to get interval from DB
     @Scheduled(fixedRate = 5000)  // Check all endpoints every 5 seconds
     public void monitorEndpoints() {
         List<MonitoredEndpoint> endpoints = monitoredEndpointsRepository.findAll();
@@ -73,16 +85,16 @@ public class EndpointsMonitoringService {
                 monitoringResult.setMonitoredEndpoint(endpoint);
 
                 // Log the information
-                LOG.info("Monitored URL: " + endpoint.getUrl());
-                LOG.info("Status Code: " + response.getStatusCode().value());
-                LOG.info("Payload: " + response.getBody());
+                log.info("Monitored URL: {}", endpoint.getUrl());
+                log.info("Status Code: {}", response.getStatusCode().value());
+                log.info("Payload: {}", response.getBody());
 
                 // Save monitoring result
                 monitoringResultRepository.save(monitoringResult);
             }
         }
 
-        LOG.info("" + LocalDateTime.now());
+        log.info("{}", LocalDateTime.now());
     }
 
     private boolean shouldCheckEndpoint(MonitoredEndpoint endpoint) {

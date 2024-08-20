@@ -15,7 +15,26 @@ public class MonitoredEndpoint {
     private LocalDateTime dateOfLastCheck;
     private Integer monitoredInterval;
     @ManyToOne
+    @JoinColumn(name = "owner_id")
     private User owner;
+
+    public MonitoredEndpoint() {}
+
+    public MonitoredEndpoint(
+            String name,
+            String url,
+            LocalDateTime dateOfCreation,
+            LocalDateTime dateOfLastCheck,
+            Integer monitoredInterval,
+            User owner
+    ) {
+        this.name = name;
+        this.url = url;
+        this.dateOfCreation = dateOfCreation;
+        this.dateOfLastCheck = dateOfLastCheck;
+        this.monitoredInterval = monitoredInterval;
+        this.owner = owner;
+    }
 
     public Long getId() {
         return id;
