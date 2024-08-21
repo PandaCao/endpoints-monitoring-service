@@ -144,18 +144,21 @@ public class EndpointsMonitoringService {
             monitoringResult.setDate(timestamp);
             monitoringResult.setReturnedHttpStatusCode(response.getStatusCode().value());
             monitoringResult.setPayload(response.getBody());
+            monitoringResult.setMonitoredEndpoint(endpoint);
 
         } catch (HttpClientErrorException e) {
             log.warn("Error monitoring URL: {}, Status Code: {}, Error: {}", endpoint.getName(), e.getStatusCode(), e.getResponseBodyAsString());
             monitoringResult.setDate(timestamp);
             monitoringResult.setReturnedHttpStatusCode(e.getStatusCode().value());
             monitoringResult.setPayload(e.getResponseBodyAsString());
+            monitoringResult.setMonitoredEndpoint(endpoint);
 
         } catch (Exception e) {
             log.error("Unexpected error when monitoring URL: {}. Error: {}", endpoint.getName(), e.getMessage());
             monitoringResult.setDate(timestamp);
             monitoringResult.setReturnedHttpStatusCode(0);
             monitoringResult.setPayload("Unexpected error: " + e.getMessage());
+            monitoringResult.setMonitoredEndpoint(endpoint);
 
         } finally {
             // Update the last check time

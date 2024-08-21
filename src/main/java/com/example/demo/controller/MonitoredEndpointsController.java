@@ -2,18 +2,23 @@ package com.example.demo.controller;
 
 import com.example.demo.domain.dto.MonitoredEndpointDTO;
 import com.example.demo.domain.entity.MonitoredEndpoint;
+import com.example.demo.domain.entity.MonitoringResult;
+import com.example.demo.domain.repository.MonitoringResultRepository;
 import com.example.demo.service.EndpointsMonitoringService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 public class MonitoredEndpointsController {
     private final EndpointsMonitoringService endpointsMonitoringService;
+    private final MonitoringResultRepository monitoringResultRepository;
 
-    public MonitoredEndpointsController(EndpointsMonitoringService endpointsMonitoringService) {
+    public MonitoredEndpointsController(EndpointsMonitoringService endpointsMonitoringService, MonitoringResultRepository monitoringResultRepository) {
         this.endpointsMonitoringService = endpointsMonitoringService;
+        this.monitoringResultRepository = monitoringResultRepository;
     }
 
     @GetMapping("/monitored-endpoints")
@@ -26,6 +31,11 @@ public class MonitoredEndpointsController {
         return endpointsMonitoringService.getMonitoredEndpointById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/monitored-endpoints/last-ten-results/{id}")
+    public List<MonitoringResult> getLastTenResultsByEndpointId(@PathVariable Long id) {
+        return monitoringResultRepository.findLastTenResultsByEndpointId(id);
     }
 
     @PostMapping("/monitored-endpoints/create")
