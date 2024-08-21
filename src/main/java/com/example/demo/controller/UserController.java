@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
-import com.example.demo.domain.dto.User;
+import com.example.demo.domain.dto.UserDTO;
+import com.example.demo.domain.entity.User;
 import com.example.demo.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,17 +29,17 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/users")
-    public User createUser(@RequestBody User user) {
+    @PostMapping("/users/create")
+    public User createUser(@RequestBody UserDTO user) {
         return userService.createUser(user);
     }
 
-    @PutMapping("/users/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
+    @PutMapping("/users/update/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody UserDTO userDetails) {
         return ResponseEntity.ok(userService.updateUser(id, userDetails));
     }
 
-    @DeleteMapping("/users/{id}")
+    @DeleteMapping("/users/delete/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

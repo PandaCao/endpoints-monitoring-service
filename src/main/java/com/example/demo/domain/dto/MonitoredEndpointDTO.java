@@ -1,44 +1,14 @@
 package com.example.demo.domain.dto;
 
-import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
-@Entity
-public class MonitoredEndpoint {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class MonitoredEndpointDTO {
     private String name;
     private String url;
     private LocalDateTime dateOfCreation;
     private LocalDateTime dateOfLastCheck;
     private Integer monitoredInterval;
-    @ManyToOne
-    @JoinColumn(name = "owner_id")
-    private User owner;
-
-    public MonitoredEndpoint() {}
-
-    public MonitoredEndpoint(
-            String name,
-            String url,
-            LocalDateTime dateOfCreation,
-            LocalDateTime dateOfLastCheck,
-            Integer monitoredInterval,
-            User owner
-    ) {
-        this.name = name;
-        this.url = url;
-        this.dateOfCreation = dateOfCreation;
-        this.dateOfLastCheck = dateOfLastCheck;
-        this.monitoredInterval = monitoredInterval;
-        this.owner = owner;
-    }
-
-    public Long getId() {
-        return id;
-    }
+    private Integer userId;
 
     public String getName() {
         return name;
@@ -80,11 +50,11 @@ public class MonitoredEndpoint {
         this.monitoredInterval = monitoredInterval;
     }
 
-    public User getOwner() {
-        return owner;
+    public Integer getUserId() {
+        return userId;
     }
 
-    public void setOwner(User owner) {
-        this.owner = owner;
+    public void setUserId(Integer owner) {
+        this.userId = owner;
     }
 }

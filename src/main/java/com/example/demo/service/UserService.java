@@ -1,7 +1,9 @@
 package com.example.demo.service;
 
-import com.example.demo.domain.dto.User;
+import com.example.demo.domain.dto.UserDTO;
+import com.example.demo.domain.entity.User;
 import com.example.demo.domain.repository.UserRepository;
+import com.example.demo.exception.NoSuchUserException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,16 +26,33 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-    public User createUser(User user) {
-        return userRepository.save(user);
+    public User createUser(UserDTO user) {
+        var newUser = new User();
+        newUser.setUsername(user.getUsername());
+        newUser.setEmail(user.getEmail());
+        newUser.setAccessToken(user.getAccessToken());
+
+        return userRepository.save(newUser);
     }
 
-    public User updateUser(Long id, User userDetails) {
-        return userRepository.findById(id).map(user -> {
+    public User updateUser(Long id, UserDTO userDetails) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NoSuchUserException("User not found with ID: " + id));
+
+        // Updates only the provided fields
+        if (userDetails.getUsername() != null) {
             user.setUsername(userDetails.getUsername());
+        }
+
+        if (userDetails.getEmail() != null) {
             user.setEmail(userDetails.getEmail());
-            return userRepository.save(user);
-        }).orElseThrow(() -> new RuntimeException("User not found"));
+        }
+
+        if (userDetails.getAccessToken() != null) {
+            user.setAccessToken(userDetails.getAccessToken());
+        }
+
+        return userRepository.save(user);
     }
 
     public void deleteUser(Long id) {

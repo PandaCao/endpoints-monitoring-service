@@ -1,7 +1,7 @@
 package com.example.demo.config;
 
-import com.example.demo.domain.dto.MonitoredEndpoint;
-import com.example.demo.domain.dto.User;
+import com.example.demo.domain.entity.MonitoredEndpoint;
+import com.example.demo.domain.entity.User;
 import com.example.demo.domain.repository.MonitoredEndpointsRepository;
 import com.example.demo.domain.repository.UserRepository;
 import org.slf4j.Logger;
@@ -13,8 +13,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Configuration
@@ -34,12 +32,11 @@ public class LoadDatabase {
 
     public void resetDB() {
         try {
-            // Delete all records from the tables
+            // Delete all records from the tables and reset auto-increment counters
             jdbcTemplate.execute("DELETE FROM monitoring_result");
             jdbcTemplate.execute("DELETE FROM monitored_endpoint");
             jdbcTemplate.execute("DELETE FROM user");
 
-            // Reset auto-increment counters
             jdbcTemplate.execute("ALTER TABLE user AUTO_INCREMENT = 1");
             jdbcTemplate.execute("ALTER TABLE monitored_endpoint AUTO_INCREMENT = 1");
             jdbcTemplate.execute("ALTER TABLE monitoring_result AUTO_INCREMENT = 1");
@@ -56,33 +53,19 @@ public class LoadDatabase {
             // Reset database
             resetDB();
 
-            // Preload user data
+            // Preload data
             User user1 = new User("Applifting", "info@applifting.cz", UUID.fromString("93f39e2f-80de-4033-99ee-249d92736a25"));
             User user2 = new User("Batman", "batman@example.com", UUID.fromString("dcb20f8a-5657-4f1b-9f7f-ce65739b359e"));
+
+            MonitoredEndpoint e0 = new MonitoredEndpoint("pokemon0", "https://pokeapi.co/api/v2/pokemon?limit=1&offset=0", LocalDateTime.now(), LocalDateTime.now(), 2, user1);
+            MonitoredEndpoint e1 = new MonitoredEndpoint("pokemon1", "https://pokeapi.co/api/v2/pokemon?limit=1&offset=1", LocalDateTime.now(), LocalDateTime.now(), 4, user1);
+            MonitoredEndpoint e2 = new MonitoredEndpoint("pokemon2", "https://pokeapi.co/api/v2/pokemon?limit=1&offset=2", LocalDateTime.now(), LocalDateTime.now(), 10, user2);
+
             log.info("Preloading {}", userRepository.save(user1));
             log.info("Preloading {}", userRepository.save(user2));
-
-            // Generate monitored endpoints
-            List<MonitoredEndpoint> monitoredEndpointsList = new ArrayList<>();
-            for (int i = 0; i < 9; i++) {
-                Long randomUserId = (long) ((Math.random() * 2) + 1);
-                User user = userRepository.findById(randomUserId).orElse(null);
-
-                if (user != null) {
-                    monitoredEndpointsList.add(
-                            new MonitoredEndpoint(
-                                    "pokemon" + i,
-                                    "https://pokeapi.co/api/v2/pokemon?limit=1&offset=" + i,
-                                    LocalDateTime.now(),
-                                    LocalDateTime.now(),
-                                    5,
-                                    user
-                            )
-                    );
-                }
-            }
-
-            log.info("Preloading {}", monitoredEndpointsRepository.saveAll(monitoredEndpointsList));
+            log.info("Preloading {}", monitoredEndpointsRepository.save(e0));
+            log.info("Preloading {}", monitoredEndpointsRepository.save(e1));
+            log.info("Preloading {}", monitoredEndpointsRepository.save(e2));
         };
     }
 }
