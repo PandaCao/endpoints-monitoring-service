@@ -4,7 +4,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import org.springframework.security.core.GrantedAuthority;
 
+import java.util.Collection;
 import java.util.UUID;
 
 @Entity
@@ -50,5 +52,9 @@ public class User {
 
     public void setAccessToken(UUID accessToken) {
         this.accessToken = accessToken;
+    }
+
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return null;
     }
 }

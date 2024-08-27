@@ -47,8 +47,10 @@ public class EndpointsMonitoringService {
         this.userRepository = userRepository;
     }
 
-    public List<MonitoredEndpoint> getAllMonitoredEndpoints() {
-        return monitoredEndpointsRepository.findAll();
+    public List<MonitoredEndpoint> getAllMonitoredEndpoints(String token) {
+        User user = userRepository.findByToken(UUID.fromString(token))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return monitoredEndpointsRepository.findByUser(user);
     }
 
     public Optional<MonitoredEndpoint> getMonitoredEndpointById(Long id) {
@@ -74,6 +76,7 @@ public class EndpointsMonitoringService {
     public MonitoredEndpoint updateMonitoredEndpoint(Long id, MonitoredEndpointDTO monitoredEndpointDetails) {
         MonitoredEndpoint endpoint = monitoredEndpointsRepository.findById(id)
                 .orElseThrow(() -> new NoSuchMonitoredEndpointException("MonitoredEndpoint not found with ID: " + id));
+        //TODO zkratit
 
         // Updates only the provided fields
         if (monitoredEndpointDetails.getName() != null) {
@@ -132,42 +135,32 @@ public class EndpointsMonitoringService {
         var monitoringResult = new MonitoringResult();
         var timestamp = LocalDateTime.now();
         try {
-            // Send an HTTP GET request to the URL
             ResponseEntity<String> response = restTemplate.getForEntity(endpoint.getUrl(), String.class);
 
-            // Log the successful response
             log.info("Monitored URL: {}", endpoint.getName());
             log.info("Status Code: {}", response.getStatusCode().value());
             log.info("Payload: {}", response.getBody());
 
-            // Set successful response details
-            monitoringResult.setDate(timestamp);
             monitoringResult.setReturnedHttpStatusCode(response.getStatusCode().value());
             monitoringResult.setPayload(response.getBody());
-            monitoringResult.setMonitoredEndpoint(endpoint);
 
         } catch (HttpClientErrorException e) {
             log.warn("Error monitoring URL: {}, Status Code: {}, Error: {}", endpoint.getName(), e.getStatusCode(), e.getResponseBodyAsString());
-            monitoringResult.setDate(timestamp);
             monitoringResult.setReturnedHttpStatusCode(e.getStatusCode().value());
             monitoringResult.setPayload(e.getResponseBodyAsString());
-            monitoringResult.setMonitoredEndpoint(endpoint);
 
         } catch (Exception e) {
             log.error("Unexpected error when monitoring URL: {}. Error: {}", endpoint.getName(), e.getMessage());
-            monitoringResult.setDate(timestamp);
             monitoringResult.setReturnedHttpStatusCode(0);
             monitoringResult.setPayload("Unexpected error: " + e.getMessage());
-            monitoringResult.setMonitoredEndpoint(endpoint);
 
         } finally {
-            // Update the last check time
+            monitoringResult.setDate(timestamp);
             endpoint.setDateOfLastCheck(timestamp);
+            monitoringResult.setMonitoredEndpoint(endpoint);
 
-            // Save monitoring result and endpoint
             monitoringResultRepository.save(monitoringResult);
             monitoredEndpointsRepository.save(endpoint);
         }
-
     }
 }
