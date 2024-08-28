@@ -5,6 +5,8 @@ import com.example.demo.domain.entity.MonitoredEndpoint;
 import com.example.demo.domain.entity.MonitoringResult;
 import com.example.demo.domain.repository.MonitoringResultRepository;
 import com.example.demo.service.EndpointsMonitoringService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +14,7 @@ import java.util.List;
 
 @RestController
 public class MonitoredEndpointsController {
+    private final Logger log = LoggerFactory.getLogger(MonitoredEndpointsController.class);
     private final EndpointsMonitoringService endpointsMonitoringService;
     private final MonitoringResultRepository monitoringResultRepository;
 
@@ -29,6 +32,17 @@ public class MonitoredEndpointsController {
 
     @GetMapping("/monitored-endpoints/{id}")
     public ResponseEntity<MonitoredEndpoint> getMonitoredEntityById(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token
+    ) {
+        return endpointsMonitoringService.getMonitoredEndpointById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    //TODO implement
+    @GetMapping("/monitored-endpoints/results/{id}")
+    public ResponseEntity<MonitoredEndpoint> getResultsByMonitoredEntityId(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token
     ) {

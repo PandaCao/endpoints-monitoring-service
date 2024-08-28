@@ -1,7 +1,6 @@
 package com.example.demo.domain.repository;
 
 import com.example.demo.domain.entity.MonitoredEndpoint;
-import com.example.demo.domain.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,5 +12,5 @@ public interface MonitoredEndpointsRepository extends JpaRepository<MonitoredEnd
     @Query(
             value = "SELECT * FROM monitored_endpoint m WHERE m.user_id=:user",
             nativeQuery = true)
-    List<MonitoredEndpoint> findByUser(@Param("user") User user);
+    List<MonitoredEndpoint> findByUser(@Param("user") Long user);
 }

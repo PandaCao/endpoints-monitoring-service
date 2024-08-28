@@ -50,7 +50,8 @@ public class EndpointsMonitoringService {
     public List<MonitoredEndpoint> getAllMonitoredEndpoints(String token) {
         User user = userRepository.findByToken(UUID.fromString(token))
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return monitoredEndpointsRepository.findByUser(user);
+
+        return monitoredEndpointsRepository.findByUser(user.getId());
     }
 
     public Optional<MonitoredEndpoint> getMonitoredEndpointById(Long id) {
