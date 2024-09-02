@@ -9,6 +9,7 @@ import com.example.demo.domain.entity.User;
 import com.example.demo.domain.repository.MonitoredEndpointsRepository;
 import com.example.demo.domain.repository.MonitoringResultRepository;
 import com.example.demo.domain.repository.UserRepository;
+import com.example.demo.exception.UserNotAuthorized;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,7 @@ public class EndpointsMonitoringService {
     private final ScheduledExecutorService scheduledExecutorService;
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final Map<Long, Instant> nextCheckTimes = new HashMap<>();
+    protected final Map<Long, Instant> nextCheckTimes = new HashMap<>();
     private final UserRepository userRepository;
 
     public EndpointsMonitoringService(
@@ -48,69 +49,104 @@ public class EndpointsMonitoringService {
     }
 
     public List<MonitoredEndpoint> getAllMonitoredEndpoints(String token) {
-        User user = userRepository.findByToken(UUID.fromString(token))
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return monitoredEndpointsRepository.findByUser(user.getId());
+        User user = findUserByToken(token);
+        return monitoredEndpointsRepository.findAllMonitoredEndpointsByUser(user.getId());
     }
 
-    public Optional<MonitoredEndpoint> getMonitoredEndpointById(Long id) {
-        return monitoredEndpointsRepository.findById(id);
+    public MonitoredEndpoint getMonitoredEndpointById(Long id, String token) {
+        var user = findUserByToken(token);
+        var endpoint = findMonitoredEndpointById(id);
+
+        if (!Objects.equals(endpoint.getUser().getId(), user.getId())) {
+            throw new UserNotAuthorized("User doesn't own this endpoint");
+        }
+
+        return endpoint;
     }
 
-    public MonitoredEndpoint createMonitoredEndpoint(MonitoredEndpointDTO newMonitoredEndpoint) {
-        var monitoredEndpoint = new MonitoredEndpoint();
+    public List<MonitoringResult> resultsByEndpointId(Long id, String token){
+        var user = findUserByToken(token);
+        var endpoint = findMonitoredEndpointById(id);
 
-        User user = userRepository.findById(newMonitoredEndpoint.getUserId().longValue())
-                .orElseThrow(() -> new NoSuchUserException("User not found with ID: " + newMonitoredEndpoint.getUserId().longValue()));
-
-        monitoredEndpoint.setName(newMonitoredEndpoint.getName());
-        monitoredEndpoint.setUrl(newMonitoredEndpoint.getUrl());
-        monitoredEndpoint.setDateOfCreation(newMonitoredEndpoint.getDateOfCreation());
-        monitoredEndpoint.setDateOfLastCheck(newMonitoredEndpoint.getDateOfLastCheck());
-        monitoredEndpoint.setMonitoredInterval(newMonitoredEndpoint.getMonitoredInterval());
-        monitoredEndpoint.setUser(user);
-
-        return monitoredEndpointsRepository.save(monitoredEndpoint);
+        return monitoringResultRepository.findResultsByEndpointId(endpoint.getId(), user.getId());
     }
 
-    public MonitoredEndpoint updateMonitoredEndpoint(Long id, MonitoredEndpointDTO monitoredEndpointDetails) {
-        MonitoredEndpoint endpoint = monitoredEndpointsRepository.findById(id)
-                .orElseThrow(() -> new NoSuchMonitoredEndpointException("MonitoredEndpoint not found with ID: " + id));
-        //TODO zkratit
+    public List<MonitoringResult> lastTenResultsByEndpointId(Long id, String token){
+        var user = findUserByToken(token);
+        var endpoint = findMonitoredEndpointById(id);
 
-        // Updates only the provided fields
-        if (monitoredEndpointDetails.getName() != null) {
-            endpoint.setName(monitoredEndpointDetails.getName());
+        return monitoringResultRepository.findLastTenResultsByEndpointId(endpoint.getId(), user.getId());
+    }
+
+    public MonitoredEndpoint createMonitoredEndpoint(MonitoredEndpointDTO newMonitoredEndpoint, String token) {
+        var user = findUserByToken(token);
+        var endpoint = buildMonitoredEndpoint(newMonitoredEndpoint, user);
+
+        return monitoredEndpointsRepository.save(endpoint);
+    }
+
+    private MonitoredEndpoint buildMonitoredEndpoint(MonitoredEndpointDTO dto, User user) {
+        MonitoredEndpoint endpoint = new MonitoredEndpoint();
+        endpoint.setName(dto.getName());
+        endpoint.setUrl(dto.getUrl());
+        endpoint.setDateOfCreation(dto.getDateOfCreation() != null ? dto.getDateOfCreation() : LocalDateTime.now());
+        endpoint.setDateOfLastCheck(dto.getDateOfLastCheck() != null ? dto.getDateOfLastCheck() : LocalDateTime.now());
+        endpoint.setMonitoredInterval(dto.getMonitoredInterval());
+        endpoint.setUser(user);
+
+        return endpoint;
+    }
+
+    public MonitoredEndpoint updateMonitoredEndpoint(Long id, MonitoredEndpointDTO monitoredEndpointDetails, String token) {
+        var user = findUserByToken(token);
+        var endpoint = findMonitoredEndpointById(id);
+
+        if (!Objects.equals(endpoint.getUser().getId(), user.getId())) {
+            throw new UserNotAuthorized("User doesn't own this endpoint");
         }
 
-        if (monitoredEndpointDetails.getUrl() != null) {
-            endpoint.setUrl(monitoredEndpointDetails.getUrl());
-        }
-
-        if (monitoredEndpointDetails.getDateOfCreation() != null) {
-            endpoint.setDateOfCreation(monitoredEndpointDetails.getDateOfCreation());
-        }
-
-        if (monitoredEndpointDetails.getDateOfLastCheck() != null) {
-            endpoint.setDateOfLastCheck(monitoredEndpointDetails.getDateOfLastCheck());
-        }
-
-        if (monitoredEndpointDetails.getMonitoredInterval() != null) {
-            endpoint.setMonitoredInterval(monitoredEndpointDetails.getMonitoredInterval());
-        }
+        Optional.ofNullable(monitoredEndpointDetails.getName()).ifPresent(endpoint::setName);
+        Optional.ofNullable(monitoredEndpointDetails.getUrl()).ifPresent(endpoint::setUrl);
+        Optional.ofNullable(monitoredEndpointDetails.getDateOfCreation()).ifPresent(endpoint::setDateOfCreation);
+        Optional.ofNullable(monitoredEndpointDetails.getDateOfLastCheck()).ifPresent(endpoint::setDateOfLastCheck);
+        Optional.ofNullable(monitoredEndpointDetails.getMonitoredInterval()).ifPresent(endpoint::setMonitoredInterval);
 
         if (monitoredEndpointDetails.getUserId() != null) {
-            User newUser = userRepository.findById(monitoredEndpointDetails.getUserId().longValue())
-                    .orElseThrow(() -> new NoSuchUserException("User not found with ID: " + monitoredEndpointDetails.getUserId().longValue()));
+            User newUser = findUserById(monitoredEndpointDetails.getUserId());
             endpoint.setUser(newUser);
         }
 
         return monitoredEndpointsRepository.save(endpoint);
     }
 
-    public void deleteMonitoredEndpoint(Long id) {
-        monitoredEndpointsRepository.deleteById(id);
+    public void deleteMonitoredEndpoint(Long id, String token) {
+        var user = findUserByToken(token);
+        var endpoint = findMonitoredEndpointById(id);
+
+        if (!Objects.equals(endpoint.getUser().getId(), user.getId())) {
+            throw new UserNotAuthorized("User doesn't own this endpoint");
+        }
+
+        if (monitoredEndpointsRepository.existsById(id)) {
+            monitoredEndpointsRepository.deleteById(id);
+        } else {
+            throw new NoSuchElementException("MonitoredEndpoint not found with ID: " + id);
+        }
+    }
+
+    private MonitoredEndpoint findMonitoredEndpointById(Long id) {
+        return monitoredEndpointsRepository.findById(id)
+                .orElseThrow(() -> new NoSuchMonitoredEndpointException("MonitoredEndpoint not found with ID: " + id));
+    }
+
+    private User findUserByToken(String token) {
+        return userRepository.findUserByToken(UUID.fromString(token))
+                .orElseThrow(() -> new NoSuchUserException("User not found with token: " + token));
+    }
+
+    private User findUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new NoSuchUserException("User not found with ID: " + id));
     }
 
     @PostConstruct
@@ -122,7 +158,7 @@ public class EndpointsMonitoringService {
         scheduledExecutorService.scheduleAtFixedRate(this::runMonitoringTasks, 0, 1, TimeUnit.SECONDS);
     }
 
-    private void runMonitoringTasks() {
+    protected void runMonitoringTasks() {
         Instant now = Instant.now();
         for (MonitoredEndpoint endpoint : monitoredEndpointsRepository.findAll()) {
             if (nextCheckTimes.get(endpoint.getId()).isBefore(now)) {
@@ -132,36 +168,58 @@ public class EndpointsMonitoringService {
         }
     }
 
-    private void checkAndLogEndpoint(MonitoredEndpoint endpoint) {
+    protected void checkAndLogEndpoint(MonitoredEndpoint endpoint) {
         var monitoringResult = new MonitoringResult();
         var timestamp = LocalDateTime.now();
+
         try {
-            ResponseEntity<String> response = restTemplate.getForEntity(endpoint.getUrl(), String.class);
+            ResponseEntity<String> response = performHttpRequest(endpoint.getUrl());
 
             log.info("Monitored URL: {}", endpoint.getName());
             log.info("Status Code: {}", response.getStatusCode().value());
             log.info("Payload: {}", response.getBody());
 
-            monitoringResult.setReturnedHttpStatusCode(response.getStatusCode().value());
-            monitoringResult.setPayload(response.getBody());
+            updateMonitoringResult(monitoringResult, response);
 
         } catch (HttpClientErrorException e) {
             log.warn("Error monitoring URL: {}, Status Code: {}, Error: {}", endpoint.getName(), e.getStatusCode(), e.getResponseBodyAsString());
-            monitoringResult.setReturnedHttpStatusCode(e.getStatusCode().value());
-            monitoringResult.setPayload(e.getResponseBodyAsString());
+            updateMonitoringResult(monitoringResult, e);
 
         } catch (Exception e) {
             log.error("Unexpected error when monitoring URL: {}. Error: {}", endpoint.getName(), e.getMessage());
-            monitoringResult.setReturnedHttpStatusCode(0);
-            monitoringResult.setPayload("Unexpected error: " + e.getMessage());
+            updateMonitoringResultForUnexpectedError(monitoringResult, e);
 
         } finally {
-            monitoringResult.setDate(timestamp);
-            endpoint.setDateOfLastCheck(timestamp);
-            monitoringResult.setMonitoredEndpoint(endpoint);
-
-            monitoringResultRepository.save(monitoringResult);
-            monitoredEndpointsRepository.save(endpoint);
+            finalizeMonitoring(monitoringResult, endpoint, timestamp);
         }
+    }
+
+    private ResponseEntity<String> performHttpRequest(String url) {
+        return restTemplate.getForEntity(url, String.class);
+    }
+
+    private void updateMonitoringResult(MonitoringResult monitoringResult, ResponseEntity<String> response) {
+        monitoringResult.setReturnedHttpStatusCode(response.getStatusCode().value());
+        monitoringResult.setPayload(response.getBody());
+    }
+
+    private void updateMonitoringResult(MonitoringResult monitoringResult, HttpClientErrorException e) {
+        monitoringResult.setReturnedHttpStatusCode(e.getStatusCode().value());
+        monitoringResult.setPayload(e.getResponseBodyAsString());
+    }
+
+    private void updateMonitoringResultForUnexpectedError(MonitoringResult monitoringResult, Exception e) {
+        monitoringResult.setReturnedHttpStatusCode(0);
+        monitoringResult.setPayload("Unexpected error: " + e.getMessage());
+    }
+
+    private void finalizeMonitoring(MonitoringResult monitoringResult, MonitoredEndpoint endpoint, LocalDateTime timestamp) {
+        monitoringResult.setDate(timestamp);
+        endpoint.setDateOfLastCheck(timestamp);
+
+        monitoringResult.setMonitoredEndpoint(endpoint);
+
+        monitoringResultRepository.save(monitoringResult);
+        monitoredEndpointsRepository.save(endpoint);
     }
 }

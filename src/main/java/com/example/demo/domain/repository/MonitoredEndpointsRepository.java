@@ -12,5 +12,5 @@ public interface MonitoredEndpointsRepository extends JpaRepository<MonitoredEnd
     @Query(
             value = "SELECT * FROM monitored_endpoint m WHERE m.user_id=:user",
             nativeQuery = true)
-    List<MonitoredEndpoint> findByUser(@Param("user") Long user);
+    List<MonitoredEndpoint> findAllMonitoredEndpointsByUser(@Param("user") Long user);
 }

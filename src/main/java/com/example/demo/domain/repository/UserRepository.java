@@ -13,5 +13,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query(
             value = "SELECT * FROM user r WHERE r.access_token=:token",
             nativeQuery = true)
-    Optional<User> findByToken(@Param("token") UUID token);
+    Optional<User> findUserByToken(@Param("token") UUID token);
 }

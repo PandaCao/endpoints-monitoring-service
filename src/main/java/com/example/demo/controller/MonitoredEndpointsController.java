@@ -3,85 +3,90 @@ package com.example.demo.controller;
 import com.example.demo.domain.dto.MonitoredEndpointDTO;
 import com.example.demo.domain.entity.MonitoredEndpoint;
 import com.example.demo.domain.entity.MonitoringResult;
-import com.example.demo.domain.repository.MonitoringResultRepository;
 import com.example.demo.service.EndpointsMonitoringService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.validation.Valid;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Log4j2
 @RestController
+@RequestMapping("/monitored-endpoints")
 public class MonitoredEndpointsController {
-    private final Logger log = LoggerFactory.getLogger(MonitoredEndpointsController.class);
     private final EndpointsMonitoringService endpointsMonitoringService;
-    private final MonitoringResultRepository monitoringResultRepository;
 
-    public MonitoredEndpointsController(EndpointsMonitoringService endpointsMonitoringService, MonitoringResultRepository monitoringResultRepository) {
+    public MonitoredEndpointsController(EndpointsMonitoringService endpointsMonitoringService) {
         this.endpointsMonitoringService = endpointsMonitoringService;
-        this.monitoringResultRepository = monitoringResultRepository;
     }
 
-    @GetMapping("/monitored-endpoints")
-    public List<MonitoredEndpoint> getAllMonitoredEndpoints(
+    @GetMapping
+    public ResponseEntity<List<MonitoredEndpoint>> getAllMonitoredEndpoints(
             @RequestHeader("Authorization") String token
     ) {
-        return endpointsMonitoringService.getAllMonitoredEndpoints(token);
+        List<MonitoredEndpoint> endpoints = endpointsMonitoringService.getAllMonitoredEndpoints(token);
+        return ResponseEntity.ok(endpoints);
     }
 
-    @GetMapping("/monitored-endpoints/{id}")
-    public ResponseEntity<MonitoredEndpoint> getMonitoredEntityById(
+    @GetMapping("/{id}")
+    public ResponseEntity<MonitoredEndpoint> getMonitoredEndpointById(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token
     ) {
-        return endpointsMonitoringService.getMonitoredEndpointById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        MonitoredEndpoint endpoint = endpointsMonitoringService.getMonitoredEndpointById(id, token);
+        return ResponseEntity.ok(endpoint);
     }
 
-    //TODO implement
-    @GetMapping("/monitored-endpoints/results/{id}")
-    public ResponseEntity<MonitoredEndpoint> getResultsByMonitoredEntityId(
+    @GetMapping("/results/{id}")
+    public ResponseEntity<List<MonitoringResult>> getResultsByMonitoredEndpointId(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token
     ) {
-        return endpointsMonitoringService.getMonitoredEndpointById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        List<MonitoringResult> results = endpointsMonitoringService.resultsByEndpointId(id, token);
+        return ResponseEntity.ok(results);
     }
 
-    @GetMapping("/monitored-endpoints/last-ten-results/{id}")
-    public List<MonitoringResult> getLastTenResultsByEndpointId(
+    @GetMapping("/last-ten-results/{id}")
+    public ResponseEntity<List<MonitoringResult>> getTenResultsByMonitoredEndpointId(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token
     ) {
-        return monitoringResultRepository.findLastTenResultsByEndpointId(id);
+        List<MonitoringResult> results = endpointsMonitoringService.lastTenResultsByEndpointId(id, token);
+        return ResponseEntity.ok(results);
     }
 
-    @PostMapping("/monitored-endpoints/create")
-    public MonitoredEndpoint createMonitoredEndpoint(
-            @RequestBody MonitoredEndpointDTO monitoredEndpoint,
+    @PostMapping("/create")
+    public ResponseEntity<MonitoredEndpoint> createMonitoredEndpoint(
+            @Valid @RequestBody MonitoredEndpointDTO monitoredEndpointDTO,
             @RequestHeader("Authorization") String token
     ) {
-        return endpointsMonitoringService.createMonitoredEndpoint(monitoredEndpoint);
+        try {
+            MonitoredEndpoint endpoint = endpointsMonitoringService.createMonitoredEndpoint(monitoredEndpointDTO, token);
+            return ResponseEntity.status(HttpStatus.CREATED).body(endpoint);
+        } catch (Exception e) {
+            log.error("Error creating monitored endpoint", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
-    @PutMapping("/monitored-endpoints/update/{id}")
+    @PutMapping("/update/{id}")
     public ResponseEntity<MonitoredEndpoint> updateMonitoredEndpoint(
             @PathVariable Long id,
-            @RequestBody MonitoredEndpointDTO monitoredEndpointDetails,
+            @RequestBody MonitoredEndpointDTO monitoredEndpointDTO,
             @RequestHeader("Authorization") String token
     ) {
-        return ResponseEntity.ok(endpointsMonitoringService.updateMonitoredEndpoint(id, monitoredEndpointDetails));
+        MonitoredEndpoint updatedEndpoint = endpointsMonitoringService.updateMonitoredEndpoint(id, monitoredEndpointDTO, token);
+        return ResponseEntity.ok(updatedEndpoint);
     }
 
-    @DeleteMapping("/monitored-endpoints/delete/{id}")
-    public ResponseEntity<MonitoredEndpoint> deleteMonitoredEndpoint(
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteMonitoredEndpoint(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token
     ) {
-        endpointsMonitoringService.deleteMonitoredEndpoint(id);
+        endpointsMonitoringService.deleteMonitoredEndpoint(id, token);
         return ResponseEntity.noContent().build();
     }
 }
