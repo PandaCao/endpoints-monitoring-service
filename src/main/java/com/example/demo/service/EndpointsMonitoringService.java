@@ -160,7 +160,9 @@ public class EndpointsMonitoringService {
 
     protected void runMonitoringTasks() {
         Instant now = Instant.now();
-        for (MonitoredEndpoint endpoint : monitoredEndpointsRepository.findAll()) {
+        List<MonitoredEndpoint> endpoints = monitoredEndpointsRepository.findAll();
+        for (MonitoredEndpoint endpoint : endpoints) {
+            nextCheckTimes.putIfAbsent(endpoint.getId(), Instant.now().plusSeconds(endpoint.getMonitoredInterval()));
             if (nextCheckTimes.get(endpoint.getId()).isBefore(now)) {
                 checkAndLogEndpoint(endpoint);
                 nextCheckTimes.put(endpoint.getId(), now.plusSeconds(endpoint.getMonitoredInterval()));
