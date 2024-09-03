@@ -249,8 +249,6 @@ class EndpointsMonitoringServiceTest {
         MonitoredEndpoint endpoint = createMonitoredEndpoint();
         endpoint.setMonitoredInterval(60);
 
-        MonitoringResult result = createMonitoringResult();
-
         Instant pastTime = Instant.now().minusSeconds(10);
         endpointsMonitoringService.nextCheckTimes.put(1L, pastTime);
 
