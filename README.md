@@ -41,7 +41,7 @@ In this file, the following services have been defined:
 Use the following <b>command</b> to start the services:: `docker-compose up`
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-- <b>There is a slight problem when starting docker compose. The endpoints monitoring service work on second startup.</b>
+- <b>There is a slight problem when starting docker compose. The endpoints monitoring service works on second startup.</b>
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 
