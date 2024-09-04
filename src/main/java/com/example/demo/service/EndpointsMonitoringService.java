@@ -155,7 +155,7 @@ public class EndpointsMonitoringService {
         for (MonitoredEndpoint endpoint : endpoints) {
             nextCheckTimes.put(endpoint.getId(), Instant.now().plusSeconds(endpoint.getMonitoredInterval()));
         }
-        scheduledExecutorService.scheduleAtFixedRate(this::runMonitoringTasks, 0, 1, TimeUnit.SECONDS);
+        scheduledExecutorService.scheduleAtFixedRate(this::runMonitoringTasks, 0, 1, TimeUnit.MILLISECONDS);
     }
 
     protected void runMonitoringTasks() {
